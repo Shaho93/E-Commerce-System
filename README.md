@@ -154,5 +154,3 @@ Add a `LICENSE` file at the repository root and specify your chosen license (for
 - `backend/src/main/resources/db/migration` Flyway migrations
 
 --- 
-
-Copy this file into `README.md` at the repository root and update `REPO_NAME`, PayPal credentials, and any environment specifics before sharing.
