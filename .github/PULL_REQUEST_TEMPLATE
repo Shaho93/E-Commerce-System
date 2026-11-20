@@ -1,0 +1,14 @@
+## Summary
+Short description of the change.
+
+## Related issue
+Closes #<issue-number> (if applicable)
+
+## How to test
+1. 
+2. 
+
+## Checklist
+- [ ] Tests pass locally
+- [ ] Documentation updated
+- [ ] No secrets committed
