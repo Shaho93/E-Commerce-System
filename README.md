@@ -5,83 +5,85 @@ A lightweight e‑commerce MVP built as a modular Spring Boot monolith with a Re
 **Core technologies**
 - **Frontend:** React  
 - **Backend:** Spring Boot (Java)  
-- **Database:** PostgreSQL with JSONB for flexible product attributes  
+- **Database:** PostgreSQL with Flyway migrations  
 - **Messaging:** RabbitMQ (optional for async tasks)  
 - **Payments:** PayPal Checkout (sandbox for development)  
 - **Dev tooling:** Docker, Docker Compose, Flyway, GitHub Actions
 
 ---
 
-### Project overview
+### Status and demo
 
-This repository implements an MVP online store with:
-- Product catalog and product pages  
-- Cart with guest and authenticated flows using JWT  
-- Order model with idempotency support and status lifecycle  
-- PayPal Checkout integration using server create/capture flow  
-- Local dev stack via Docker Compose including Postgres and RabbitMQ  
-- CI pipeline and staging deployment guidance
+| | |
+| --- | --- |
+| **Status** | MVP in development |
+| **Live demo** | `https://e-commerce.kindiit.de` (browser demo, see below) |
+| **Demo shop** | "Kindi Rösterei", a fictional coffee roastery |
 
-The architecture favors a single deployable monolith for rapid delivery. Add services such as hosted search, Redis caching, or dedicated workers only when needed.
+The live demo runs entirely in the browser: the React frontend uses a demo API that mirrors the Spring Boot
+backend (same products, pricing rules, stock checks and idempotency) and stores everything in `localStorage`.
+No server, no costs, no real orders or payments. With `VITE_API_URL` set, the same frontend talks to the real backend.
 
----
+### Features
+
+- [x] Product catalog with categories, search and sorting (`GET /api/products`, `GET /api/products/{slug}`, `GET /api/categories`)
+- [x] Cart (client side) with free-shipping threshold and stock limits
+- [x] Guest checkout (`POST /api/orders`) with server-side pricing, stock reservation and optimistic locking
+- [x] Idempotent order creation via `Idempotency-Key` header (no duplicate orders on double click or retry)
+- [x] Order lookup by order number (`GET /api/orders/{orderNumber}`)
+- [x] Payment abstraction (`PaymentProvider`) with a simulated provider; PayPal Checkout is the next implementation
+- [x] Validation and error responses as RFC 9457 Problem Details (German messages)
+- [x] Flyway migrations with sample data, integration tests against PostgreSQL, CI with GitHub Actions
+- [ ] Customer accounts with JWT login
+- [ ] PayPal Checkout (sandbox) with server create/capture
+- [ ] Admin area: manage products and order status
+
+### Project structure
+
+```
+backend/   Spring Boot 4 (Java 21): catalog, order, payment, common
+frontend/  React + TypeScript (Vite): shop, cart, checkout; src/api/demo.ts = browser demo
+docker-compose.yml  local stack: backend, frontend, PostgreSQL, RabbitMQ
+```
 
 ### Quick start
 
-Follow these steps to run the project locally using Docker Compose.
-
-#### Prerequisites
-- **Git** installed and configured  
-- **Docker** and **Docker Compose** installed  
-- **Node.js** and **npm** for frontend development (optional if using Docker)  
-- **Java 17+** and **Maven** or **Gradle** if running backend outside Docker
-
-#### Clone repository
 ```bash
 git clone https://github.com/Shaho93/E-Commerce-System.git
 cd E-Commerce-System
+cp .env.example .env        # local development values, never commit real secrets
+docker compose up --build
 ```
 
-#### Environment variables
-Create a `.env` file from `.env.example` and set required values. Example keys to set:
+- Frontend: `http://localhost:8082`
+- Backend: `http://localhost:8080/api/products`, health at `/actuator/health`
+- Flyway creates the schema and inserts the sample products on startup.
 
-```
-POSTGRES_USER=dev
-POSTGRES_PASSWORD=devpass
-POSTGRES_DB=app_dev
-RABBITMQ_DEFAULT_USER=guest
-RABBITMQ_DEFAULT_PASS=guest
-PAYPAL_CLIENT_ID=your-paypal-sandbox-client-id
-PAYPAL_CLIENT_SECRET=your-paypal-sandbox-secret
-JWT_SECRET=change_this_to_a_secure_value
-```
+Only the frontend demo (no backend needed):
 
-**Important** Never commit secrets to the repository.
-
-#### Start services
 ```bash
-docker-compose up --build
+cd frontend
+npm install
+npm run dev                 # without VITE_API_URL the browser demo is used
 ```
 
-- Backend: `http://localhost:8080` (health endpoint at `/actuator/health` or `/health`)  
-- Frontend: `http://localhost:8082` or served by the frontend container depending on config  
-- Postgres and RabbitMQ: ports defined in `docker-compose.yml`
+Backend tests need a running PostgreSQL (e.g. `docker compose up postgres`):
 
-#### Database migrations
-Flyway runs automatically on backend startup if configured. To run manually inside the backend container or locally:
 ```bash
-# Maven
-./mvnw flyway:migrate
-
-# Gradle
-./gradlew flywayMigrate
+cd backend
+./mvnw verify
 ```
 
-#### Seed data
-Initial Flyway migration inserts sample products for local development. Verify with:
-```bash
-psql -h localhost -U dev -d app_dev -c "SELECT id, sku, name FROM products LIMIT 10;"
-```
+### Demo hosting (Cloudflare, free tier)
+
+Cloudflare Workers project `kindiit-e-commerce`, connected to this repository:
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `frontend` |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Production branch | `main` |
 
 ---
 
